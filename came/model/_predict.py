@@ -171,7 +171,7 @@ class Predictor(object):
         if isinstance(classes, int):
             self._classes = list(range(classes))
         else:
-            _unitype = lambda x: int(x) if isinstance(x, np.integer) else x
+            _unitype = lambda x: int(x) if isinstance(x, int) else x
             classes = [_unitype(c) for c in classes]
             self._classes = classes
         self._mode = mode

@@ -1585,7 +1585,7 @@ def normalize_row(X, scale_factor=1, by='sum'):
         raise ValueError(f'`by` should be either "sum" or "max", got {by}')
     if hasattr(norms, 'A'):
         norms = norms.A.flatten()
-    is_zero = -_eps <= norms <= _eps
+    is_zero = (norms >= -_eps) & (norms <= _eps)
     if scale_factor is None:
         scale_factor = np.median(norms[~ is_zero])
     norms /= scale_factor

@@ -179,7 +179,26 @@ def main_for_aligned(
         oo_adjs=scnets,
         dataset_names=dataset_names,
     )
-    print(dpair)
+    # print("dpair keys:", dir(dpair))
+    # print("dpair dict:", dpair.__dict__.keys())
+    # print("dpair.var.head()", dpair.var.head())
+    # print("dpair.var.columns", dpair.var.columns)
+
+    # Try to access gene node names from dpair
+    if isinstance(dpair.var, dict):
+        gene_names = dpair.var.get('gene', None)
+    elif isinstance(dpair.var, pd.DataFrame):
+        gene_names = dpair.var.index.tolist()
+    else:
+        gene_names = None
+
+    if gene_names is None:
+        raise ValueError("Gene names not found in dpair.var")
+    else:
+        print(f"# of gene names found: {len(gene_names)}")
+        # Save to CSV
+        pd.DataFrame({'gene': dpair.var['name'].tolist()}).to_csv("all_aligned_genes.csv", index=False)
+
 
     ENV_VARs = prepare4train(dpair, key_class=keys, batch_keys=batch_keys)
 
@@ -433,6 +452,22 @@ def main_for_unaligned(
                                  )
     print(dpair)
 
+    # Try to access gene node names from dpair
+    if isinstance(dpair.var, dict):
+        gene_names = dpair.var.get('gene', None)
+    elif isinstance(dpair.var, pd.DataFrame):
+        gene_names = dpair.var.index.tolist()
+    else:
+        gene_names = None
+
+    if gene_names is None:
+        raise ValueError("Gene names not found in dpair.var")
+    else:
+        print(f"# of gene names found: {len(gene_names)}")
+        # Save to CSV
+        pd.DataFrame({'gene': dpair.var['name'].tolist()}).to_csv("all_unaligned_genes.csv", index=False)
+
+
     ENV_VARs = prepare4train(dpair, key_class=keys, batch_keys=batch_keys,)
 
     logging.info(ENV_VARs.keys())
@@ -514,10 +549,11 @@ def main_for_unaligned(
                 df_probs=outputs['df_probs']
             )
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             logging.warning(f'An error occurred when plotting results: {e}')
 
     return outputs
-
 
 def plot_class_results(
         obs, obs_ids1, obs_ids2,
@@ -536,6 +572,9 @@ def plot_class_results(
     # else:
     #     labels_cat = obs["REF"]
     #     acc_tag = f'(acc{test_acc:.1%})'
+    obs_ids1 = detach2numpy(obs_ids1) if not isinstance(obs_ids1, np.ndarray) else obs_ids1
+    obs_ids2 = detach2numpy(obs_ids2) if not isinstance(obs_ids2, np.ndarray) else obs_ids2
+
     labels_cat = obs[key_true]
     cl_preds = obs[key_pred]
 
@@ -1052,6 +1091,9 @@ def __test1__(n_epochs: int = 5, batch_size=None, reverse=False):
         node_source='deg,hvg',
         ntop_deg=50,
     )
+    # Save aligned gene names (1:1 orthologs with DEG/HVG filtering)
+    # genes_aligned = pd.DataFrame({'gene': adata1.var_names})
+    # genes_aligned.to_csv("aligned_genes.csv", index=False)
 
     _ = main_for_aligned(
         **came_inputs,
@@ -1066,6 +1108,14 @@ def __test1__(n_epochs: int = 5, batch_size=None, reverse=False):
         batch_size=batch_size,
         plot_results=True,
     )
+    
+
+    # gene_ids = g.nodes('gene')
+    # gene_names = g.nodes['gene'].data['_ID']  # or check if it's 'name' or 'symbol'
+    # gene_names = [x.decode() if isinstance(x, bytes) else str(x) for x in gene_names]
+
+    # pd.Series(gene_names).to_csv("all_aligned_genes.csv", index=False)
+
 
     del _
     torch.cuda.empty_cache()
@@ -1109,6 +1159,11 @@ def __test2__(n_epochs: int = 5, batch_size=None, reverse=False):
         ntop_deg=50,
     )
 
+    # Save unaligned gene names (includes non-1:1 orthologs, filtered by DEG/HVG)
+    # genes_unaligned = pd.DataFrame({'gene': adata1.var_names})
+    # genes_unaligned.to_csv("unaligned_genes.csv", index=False)
+
+
     _ = main_for_unaligned(
         **came_inputs,
         df_varmap=df_varmap,
@@ -1126,6 +1181,14 @@ def __test2__(n_epochs: int = 5, batch_size=None, reverse=False):
         batch_size=batch_size,
         plot_results=True,
     )
+
+
+    # gene_ids = g.nodes('gene')
+    # gene_names = g.nodes['gene'].data['_ID']  # or check if it's 'name' or 'symbol'
+    # gene_names = [x.decode() if isinstance(x, bytes) else str(x) for x in gene_names]
+
+    # pd.Series(gene_names).to_csv("all_unaligned_genes.csv", index=False)
+
 
     del _
     torch.cuda.empty_cache()
